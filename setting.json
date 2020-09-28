@@ -1,0 +1,19 @@
+{
+    "menu": [
+        {
+            "name": "首页",
+            "url": "/home",
+            "path": "../views/home/index.js"
+        },
+        {
+            "name": "3D效果",
+            "children": [
+                {
+                    "name": "木棉花模仿",
+                    "url": "/mumianhua",
+                    "path": "../views/mumianhua/index.js"
+                }
+            ]
+        }
+    ]
+}

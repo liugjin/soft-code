@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>轻松代码</title>
+    <link rel="stylesheet" href="lib/layui/css/layui.css" media="all">
+</head>
+
+<body>
+    <div id="app">
+        <div class="layui-header header header-doc" summer="" style="height: 66px">
+            <ul class="layui-nav layui-bg-cyan">
+                <li 
+                    class="layui-nav-item" 
+                    v-for="(path, index) in menu"
+                >
+                    <router-link :to="path.url" v-if="!path.children && path.url == '/home'">
+                        <i class="layui-icon layui-icon-home" style="font-size: 30px;" title="回到首页"></i> 
+                    </router-link>
+                    <router-link :to="path.url" v-if="!path.children && path.url != '/home'">{{path.name}}</router-link>
+                    <a href="javascript:;" v-if="path.children">{{path.name}}<span class="layui-nav-more"></span></a>
+                    <dl class="layui-nav-child layui-anim layui-anim-upbit" v-if="path.children">
+                        <dd lay-unselect="" v-for="child in path.children">
+                            <router-link :to="child.url">{{child.name}}</router-link>
+                        </dd>
+                    </dl>
+                </li>
+            </ul>
+        </div>
+        <div class="layui-main site-inline" style="width: calc(100% - 240px);">
+            <transition name="component-fade" mode="out-in">
+                <keep-alive>
+                    <router-view></router-view>
+                </keep-alive>
+            </transition>
+        </div>
+    </div>
+    <script data-main="app" src="lib/require@2.3.6.min.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,358 @@
+<html>
+ 
+<head>
+    <title>纹理偏移+Sprite标签</title>
+    <style>
+        body {
+            background-color: #000;
+            margin: 0px;
+            overflow: hidden;
+        }
+ 
+        #WebGL {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: 999;
+        }
+    </style>
+</head>
+ 
+<body>
+    <div id="WebGL"></div>
+    <script src="./lib/jquery/dist/jquery-1.12.4.min.js"></script>
+    <script src="./lib/three.js/build/three.min.js"></script>
+    <script src="./lib/three.js/examples/js/controls/OrbitControls.js"></script>
+    <script>
+		'use strict';
+        var container, camera, scene, renderer, geometry, material, controls; //常用变量
+        var spotLight, mesh_sphere; //自定义对象变量
+        var target = new THREE.Vector3(0, 30, 0);
+        var webGLW = $('#WebGL').width();
+        var webGLH = $('#WebGL').height();
+        var textureLoader = new THREE.TextureLoader(); //纹理加载器
+        init();
+        animate();
+ 
+        function init() {
+            container = document.getElementById('WebGL');
+            rendererScene(); //场景渲染
+            sceneBackground();
+            camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 10000);
+            camera.position.set(0, 50, 200);
+            camera.lookAt(target);
+            plane() //// 地面
+            lights(); //灯光：聚光灯
+            addMovePlane(scene); //推荐偏移的平面和圆
+            loadModel(); //添加模型
+            OrbitControls(camera, renderer); //OrbitControls控件模块
+            window.addEventListener('resize', onWindowResize, false); //监听屏幕变化
+        }
+ 
+        function sceneBackground() {
+            scene = new THREE.Scene();
+            // scene.background = new THREE.Color(0xcfcfcf);//可以用图片代替作为背景
+            var path = '../image/sky/';
+            var format = '.jpg';
+            new THREE.CubeTextureLoader().load([
+                // path + 'px' + format, path + 'nx' + format, //右左
+                // path + 'py' + format, path + 'ny' + format, //上下
+                // path + 'pz' + format, path + 'nz' + format //前后
+                "test.png","test.png","test.png","test.png","test.png","test.png"
+            ], function (res) {
+                scene.background = res;
+            });
+            // // scene.fog = new THREE.Fog(0xa0a0a0, 200, 1000); //雾
+        }
+ 
+ 
+        function plane() {
+            // texture_plane = textureLoader.load('../image/textureOffset.png');
+            texture_plane = textureLoader.load('code.png');
+            texture_plane.wrap = texture_plane.wrapT = THREE.RepeatWrapping; //平铺重复
+            texture_plane.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            // 地面
+            let geometry = new THREE.PlaneBufferGeometry(200, 200);
+            let grid_mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({
+                color: 0x999999,
+                // depthWrite: false
+            }));
+            grid_mesh.rotation.x = -Math.PI / 2;
+            grid_mesh.receiveShadow = true;
+            scene.add(grid_mesh);
+ 
+            var grid = new THREE.GridHelper(200, 20, 0x000000, 0x000000);
+            grid.material.opacity = 0.2;
+            grid.material.transparent = true;
+            scene.add(grid);
+ 
+        }
+ 
+        function lights() { //光影自己改哦
+ 
+            var ambient = new THREE.AmbientLight(0xffffff);
+            scene.add(ambient);
+            //聚光灯
+            //  SpotLight( color：颜色, intensity：强度, distance：发光距离, angle：角度, penumbra：边缘范围, decay：衰减 )
+            spotLight = new THREE.SpotLight(0xffffff, 1);
+            spotLight.position.set(0, 120, 0);
+            spotLight.angle = Math.PI / 6;
+            spotLight.penumbra = 0.05; //边缘范围，反比
+            spotLight.decay = 2; //衰减系数，反比
+            spotLight.distance = 400; //发光距离
+            spotLight.castShadow = true; //阴影
+            spotLight.shadow.mapSize.width = 1024;
+            spotLight.shadow.mapSize.height = 1024;
+            spotLight.shadow.camera.near = 10; //近截面
+            spotLight.shadow.camera.far = 250;
+            scene.add(spotLight);
+        }
+ 
+        function lightsHelper(lightsObject) {
+            // 聚光灯显示助手SpotLightHelper( light:灯光, color：颜色 )
+            var lightHelper = new THREE.SpotLightHelper(lightsObject, 0xdfdfdf);
+            scene.add(lightHelper);
+            let mesh = new THREE.Mesh(new THREE.PlaneBufferGeometry(100, 100), new THREE.MeshPhongMaterial({
+                color: 0x9cfcf99,
+                depthWrite: false
+            }));
+            mesh.rotation.x = -Math.PI / 2;
+            mesh.position.set(0, -20, 0)
+            mesh.receiveShadow = true;
+            scene.add(mesh);
+        }
+ 
+        var texture_plane;
+ 
+        function addMovePlane(scene) {
+            // 背景平面
+            let geometry02 = new THREE.PlaneBufferGeometry(150, 100);
+            let plane_back = new THREE.Mesh(geometry02, new THREE.MeshPhongMaterial({
+                map: texture_plane,
+                transparent: true,
+            }));
+            plane_back.position.set(0, 50, -100);
+            plane_back.name = 'plane';
+            let plane_back_make =makeTextSprite(plane_back.name,{
+                fontsize: 80,
+                borderColor: {r:180, g:125, b:125, a:0.4},/* 边框颜色 */
+                backgroundColor: {r:255, g:255, b:255, a:0.9}/* 背景颜色 */
+            })
+            plane_back_make.center = new THREE.Vector2(0, 0);
+            plane_back_make.name='plane_back_make';
+            let plane_back_parameters=plane_back.geometry.parameters ;
+            plane_back_make.position.set(-(plane_back_parameters.width/2+15),plane_back.position.y , plane_back.position.z);
+            scene.add(plane_back,plane_back_make);
+ 
+            let circle = new THREE.Mesh(new THREE.CircleGeometry(60, 100, 100), new THREE.MeshPhongMaterial({
+                map: texture_plane,
+                transparent: true,
+                depthTest: false //关闭检测，让2个重叠的平面正确显示
+            }));
+            circle.rotation.x = -Math.PI / 2;
+            circle.name = 'circle';
+            scene.add(circle);
+        }
+        var texture_sphere;
+ 
+        function loadModel() { //模型
+            //圆球
+            // texture_sphere = textureLoader.load('../image/textureOffset.png');
+            texture_sphere = textureLoader.load('code.png');
+            texture_sphere.wrap = texture_sphere.wrapT = THREE.RepeatWrapping; //平铺重复
+            mesh_sphere = new THREE.Mesh(
+                new THREE.SphereBufferGeometry(20, 20, 20),
+                new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    map: texture_sphere,
+                    side: 2,
+                    transparent: true,
+                    // wireframe: true
+                })
+            );
+            mesh_sphere.position.set(0, 30, 0)
+            mesh_sphere.name = 'sphere';
+            let mesh_sphere_make =makeTextSprite(mesh_sphere.name,{
+                fontsize: 80,
+                borderColor: {r:180, g:125, b:125, a:0.4},/* 边框颜色 */
+                backgroundColor: {r:255, g:255, b:255, a:0.9}/* 背景颜色 */
+            })
+            mesh_sphere_make.center = new THREE.Vector2(0, 0);
+            mesh_sphere_make.name='mesh_sphere_make';
+            let mesh_sphere_parameters=mesh_sphere.geometry.parameters ;
+            mesh_sphere_make.position.set(-(mesh_sphere_parameters.radius+15),mesh_sphere.position.y , mesh_sphere.position.z);
+            scene.add(mesh_sphere,mesh_sphere_make);
+ 
+ 
+        }
+        /* 创建字体精灵 */
+        function makeTextSprite(message, parameters) {
+ 
+            if (parameters === undefined) parameters = {};
+            
+            /* 字体 */
+            let fontface = parameters.hasOwnProperty("fontface") ?
+                parameters["fontface"] : "Arial";
+ 
+            /* 字体大小 */
+            let fontsize = parameters.hasOwnProperty("fontsize") ?
+                parameters["fontsize"] : 10;
+ 
+            /* 边框厚度 */
+            let borderThickness = parameters.hasOwnProperty("borderThickness") ?
+                parameters["borderThickness"] : 4;
+ 
+            /* 边框颜色 */
+            let borderColor = parameters.hasOwnProperty("borderColor") ?
+                parameters["borderColor"] : {
+                    r: 0,
+                    g: 0,
+                    b: 0,
+                    a: 1.0
+                };
+ 
+            /* 背景颜色 */
+            let backgroundColor = parameters.hasOwnProperty("backgroundColor") ?
+                parameters["backgroundColor"] : {
+                    r: 255,
+                    g: 255,
+                    b: 255,
+                    a: 1.0
+                };
+ 
+            /* 创建画布 */
+            let canvas = document.createElement('canvas');
+            let context = canvas.getContext('2d');
+ 
+            /* 字体加粗 */
+            context.font = "Bold " + fontsize + "px " + fontface;
+ 
+            /* 获取文字的大小数据，高度取决于文字的大小 */
+            let metrics = context.measureText(message);
+            console.log('文字metrics::',metrics);
+            
+            let textWidth = metrics.width;
+ 
+            /* 背景颜色 */
+            context.fillStyle = "rgba(" + backgroundColor.r + "," + backgroundColor.g + "," +
+                backgroundColor.b + "," + backgroundColor.a + ")";
+ 
+            /* 边框的颜色 */
+            context.strokeStyle = "rgba(" + borderColor.r + "," + borderColor.g + "," +
+                borderColor.b + "," + borderColor.a + ")";
+            context.lineWidth = borderThickness;
+ 
+            /* 绘制圆角矩形 */
+            roundRect(context, borderThickness / 2, borderThickness / 2, textWidth + borderThickness, fontsize * 1.4 +
+                borderThickness, 30);
+ 
+            /* 字体颜色 */
+            context.fillStyle = "rgba(0, 0, 0, 1.0)";
+            context.fillText(message, borderThickness, fontsize + borderThickness);
+ 
+            /* 画布内容用于纹理贴图 */
+            let texture = new THREE.Texture(canvas);
+            texture.needsUpdate = true;
+ 
+            let spriteMaterial = new THREE.SpriteMaterial({
+                map: texture
+            });
+            let sprite = new THREE.Sprite(spriteMaterial);
+ 
+            console.log(sprite.spriteMaterial);
+ 
+            /* 缩放比例 */
+            sprite.scale.set(10, 5, 1);
+ 
+            return sprite;
+ 
+        }
+ 
+        /**
+         * @method 绘制圆角矩形 
+         * @param {*} ctx canvas画布
+         * @param {*} x x位置
+         * @param {*} y y位置
+         * @param {*} w 宽
+         * @param {*} h 高
+         * @param {*} r 圆角的半径
+         */
+        function roundRect(ctx, x, y, w, h, r) {
+ 
+            ctx.beginPath();
+            // 起始点（左上圆角处的直线位置）
+            ctx.moveTo(x + r, y);
+            // 矩形上宽线条（突出来一点）
+            ctx.lineTo(x + w*1.5 - r, y);
+            // 绘制左上圆角（二次贝塞尔曲线）
+            ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+            // 右高线条
+            ctx.lineTo(x + w, y + h - r);
+            // 右下圆角
+            ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            // 左下线条
+            ctx.lineTo(x + r, y + h);
+            // 左下圆角
+            ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+            // 左高线条
+            ctx.lineTo(x, y + r);
+            // 左上圆角
+            ctx.quadraticCurveTo(x, y, x + r, y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+ 
+        }
+ 
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+ 
+        }
+ 
+        function rendererScene() {
+            renderer = new THREE.WebGLRenderer({
+                antialias: true
+            });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.gammaInput = true;
+            renderer.gammaOutput = true;
+            container.appendChild(renderer.domElement);
+        }
+ 
+        function OrbitControls(camera, renderer) {
+            //OrbitControls控件操作模块
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.target = target; //控制的target
+            // controls.autoRotate = true; //是否自动旋转
+            // controls.autoRotateSpeed = 0.2; //自动旋转速度，正比
+        }
+        /* 数据更新 */
+        function updata() {
+            // 设置纹理偏移
+            var time = Date.now() * 0.004;
+            // texture_sphere.offset.y = (Math.sin(time)*0.1);//往返偏移
+            texture_sphere.offset.x += 0.001; //左右偏移
+            if (texture_sphere.offset.x >= 0.5) {
+                texture_sphere.offset.x = 0;
+            }
+ 
+            texture_plane.offset.y -= 0.005;
+        }
+ 
+        function animate() {
+            requestAnimationFrame(animate);
+            if (controls) controls.update();
+            updata();
+            renderer.render(scene, camera);
+        };
+	</script>
+</body>
+ 
+</html>
